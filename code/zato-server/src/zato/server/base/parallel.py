@@ -900,10 +900,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             # Pick-up processor
             self.singleton_server.pickup.stop()
 
-            # Cluster-wide flags
-            if self.singleton_server.is_cluster_wide:
-                self.odb.clear_cluster_wide()
-
         # Tell the ODB we've gone through a clean shutdown but only if this is
         # the main process going down (Arbiter) not one of Gunicorn workers.
         # We know it's the main process because its ODB's session has never

@@ -32,7 +32,8 @@ Examples:
   - If a load-balancer has been installed in /home/zato/lb1, the command to start it is 'zato start /home/zato/lb1'."""
 
     opts = [
-        {'name':'--fg', 'help':'If given, the component will run in foreground', 'action':'store_true'}
+        {'name':'--fg', 'help':'If given, the component will run in foreground', 'action':'store_true'},
+        {'name':'--singleton', 'help':'If given, the component will start a singleton process in background', 'action':'store_true'},
     ]
 
     def run_check_config(self):
@@ -59,6 +60,8 @@ Examples:
     def start_component(self, py_path, name, program_dir, on_keyboard_interrupt=None):
         """ Starts a component in background or foreground, depending on the 'fg' flag.
         """
+        os.environ['ZATO_IS_SINGLETON'] = str(int(self.args.singleton))
+
         program = '{} -m {} {} {}'.format(get_executable(), py_path, program_dir, ('' if self.args.fg else '2>&1 >/dev/null'))
         try:
             run(program, async=False if self.args.fg else True)

@@ -335,21 +335,6 @@ class ODBManager(SessionWrapper):
 
             return dp.id
 
-    def _become_cluster_wide(self, cluster, session):
-        """ Update all the Cluster's attributes that are related to connector servers.
-        """
-        cluster.cw_srv_id = self.server.id
-        cluster.cw_srv_keep_alive_dt = datetime.utcnow()
-
-        session.add(cluster)
-        session.commit()
-
-        msg = 'Server id:[{}], name:[{}] is now a connector server for cluster id:[{}], name:[{}]'.format(
-            self.server.id, self.server.name, cluster.id, cluster.name)
-        logger.info(msg)
-
-        return True
-
     def conn_server_past_grace_time(self, cluster, grace_time):
         """ Whether it's already past the grace time the connector server had
         for updating its keep-alive timestamp.
@@ -364,46 +349,6 @@ class ODBManager(SessionWrapper):
 
         # Return True if 'now' is past what it's allowed
         return now > max_allowed
-
-    def become_cluster_wide(self, grace_time):
-        """ Makes an attempt for the server to become a connector one, that is,
-        the server to start all the connectors.
-        """
-        with closing(self.session()) as session:
-            cluster = session.query(Cluster).\
-                with_lockmode('update').\
-                filter(Cluster.id == self.server.cluster_id).\
-                one()
-
-            # No cluster-wide singleton server at all so we made it first
-            if not cluster.cw_srv_id:
-                return self._become_cluster_wide(cluster, session)
-            elif self.conn_server_past_grace_time(cluster, grace_time):
-                return self._become_cluster_wide(cluster, session)
-            else:
-                session.rollback()
-                msg = ('Server id:[{}], name:[{}] will not be a connector server for '
-                'cluster id:[{}], name:[{}], cluster.cw_srv_id:[{}], cluster.cw_srv_keep_alive_dt:[{}]').format(
-                    self.server.id, self.server.name, cluster.id, cluster.name, cluster.cw_srv_id, cluster.cw_srv_keep_alive_dt)
-                logger.debug(msg)
-
-    def clear_cluster_wide(self):
-        """ Invoked when the cluster-wide singleton server is making a clean shutdown, sets
-        all the relevant data to NULL in the ODB.
-        """
-        with closing(self.session()) as session:
-            cluster = session.query(Cluster).\
-                with_lockmode('update').\
-                filter(Cluster.id == self.server.cluster_id).\
-                one()
-
-            cluster.cw_srv_id = None
-            cluster.cw_srv_keep_alive_dt = None
-
-            session.add(cluster)
-            session.commit()
-
-            self.logger.info('({}) Cleared cluster-wide singleton server flag'.format(self.server.name))
 
     def add_delivery(self, deployment_time, details, service, source_info):
         """ Adds information about the server's deployed service into the ODB.
@@ -820,7 +765,7 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def audit_set_request_http_soap(self, conn_id, name, cid, transport, 
+    def audit_set_request_http_soap(self, conn_id, name, cid, transport,
             connection, req_time, user_token, remote_addr, req_headers,
             req_payload):
 
