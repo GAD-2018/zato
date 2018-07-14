@@ -30,26 +30,7 @@ class ClusterWideSingletonKeepAlive(AdminService):
     manages the connectors and scheduler jobs, is indeed still alive.
     """
     def handle(self):
-        s1, s2 = self.request.payload.split(';')
-        server_id = int(s1.split(':')[1])
-        cluster_id = int(s2.split(':')[1])
-
-        with closing(self.odb.session()) as session:
-            cluster = session.query(Cluster).\
-                with_lockmode('update').\
-                filter(Cluster.id == cluster_id).\
-                one()
-
-            server = session.query(Server).\
-                filter(Server.id == server_id).\
-                one()
-
-            cluster.cw_srv_keep_alive_dt = datetime.utcnow()
-            session.add(cluster)
-            session.commit()
-
-            msg = 'Cluster-wide singleton keep-alive OK, server id:[{}], name:[{}] '.format(server.id, server.name)
-            logger.info(msg)
+        pass # No longer needed - superseded by ZATO_IS_SINGLETON environment variable
 
 class EnsureClusterWideSingleton(AdminService):
     """ Initializes connectors and scheduler jobs.
